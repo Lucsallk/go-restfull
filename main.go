@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 var port string = ":8080"
@@ -30,13 +32,17 @@ func returnAllArticles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRequest() {
-	http.HandleFunc("/", homePage)
-	http.HandleFunc("/articles", returnAllArticles)
-	log.Fatal(http.ListenAndServe(port, nil))
+	// Cria uma instancia de um router Mux
+	router := mux.NewRouter().StrictSlash(true)
+
+	router.HandleFunc("/", homePage)
+	router.HandleFunc("/articles", returnAllArticles)
+
+	log.Fatal(http.ListenAndServe(port, router))
 }
 
 func main() {
-	fmt.Printf("Starting API on %v ", port)
+	fmt.Printf("Starting API v2.0 - Mux Routers on %v ", port)
 
 	Articles = []Article{
 		{Title: "Titulo 1", Desc: "First Description", Content: "First Content"},
