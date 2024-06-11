@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -33,6 +34,7 @@ func returnAllArticles(w http.ResponseWriter, r *http.Request) {
 }
 
 func returSingleArticle(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: returSingleArticle")
 	vars := mux.Vars(r)
 	key := vars["id"]
 
@@ -43,13 +45,72 @@ func returSingleArticle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func createNewArticle(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: createNewArticle")
+	reqBody, _ := io.ReadAll(r.Body)
+	fmt.Fprintf(w, "%+v", string(reqBody))
+
+	// Append element to the json array
+	var article Article
+	//                    =>
+	json.Unmarshal(reqBody, &article)
+
+	Articles = append(Articles, article)
+
+	json.NewEncoder(w).Encode(article)
+}
+
+func deleteArticle(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: deleteArticle")
+	vars := mux.Vars(r)
+	key := vars["id"]
+
+	for i, article := range Articles {
+		if article.Id == key {
+			// Junta os intervalos que não tem o elemento chave
+			Articles = append(Articles[:i], Articles[i+1:]...)
+		}
+	}
+}
+
+func updateArticle(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: updateArticle")
+
+	var article Article
+	reqBody, _ := io.ReadAll(r.Body)
+	json.Unmarshal(reqBody, &article)
+
+	vars := mux.Vars(r)
+	key := vars["id"]
+
+	fmt.Println(article)
+	for i, articleUpdated := range Articles {
+		if articleUpdated.Id == key {
+			aux := Articles[i+1:]
+			fmt.Println(aux)
+			Articles = append(Articles[:i], article)
+			fmt.Println(Articles)
+			Articles = append(Articles, aux...)
+			fmt.Println(Articles)
+
+		}
+	}
+}
+
+// Articles = append(Articles[:i], Articles[i+1:]...)
+
 func handleRequest() {
 	// Cria uma instancia de um router Mux
 	router := mux.NewRouter().StrictSlash(true)
 
 	router.HandleFunc("/", homePage)
 	router.HandleFunc("/articles", returnAllArticles)
-	router.HandleFunc("/articles/{id}", returSingleArticle)
+
+	router.HandleFunc("/article", createNewArticle).Methods("POST")
+	router.HandleFunc("/article/{id}", deleteArticle).Methods("DELETE")
+	router.HandleFunc("/article/{id}", updateArticle).Methods("PUT")
+	router.HandleFunc("/article/{id}", returSingleArticle)
+
 	log.Fatal(http.ListenAndServe(port, router))
 }
 
@@ -59,6 +120,7 @@ func main() {
 	Articles = []Article{
 		{Id: "1", Title: "Titulo 1", Desc: "First Description", Content: "First Content"},
 		{Id: "2", Title: "Titulo 2", Desc: "Second Description", Content: "Second Content"},
+		{Id: "3", Title: "Titulo 3", Desc: "Third Description", Content: "Third Content"},
 	}
 	handleRequest()
 }
